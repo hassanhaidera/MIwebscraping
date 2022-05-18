@@ -1,7 +1,9 @@
 from urllib.request import urlopen
 import bs4 as bs
 import pandas as pd
+import numpy as np 
 import re
+from datetime import date
 def Extract_Date(Date_text):
     """Extracts date form various types of texts
         Arguments:
@@ -25,44 +27,42 @@ def listToString(s):
     return (str1.join(s))
 
 def get_Sudanbid():
-    """"
+    """
     """
     try :
         sudanbid_HTML=urlopen('https://www.sudanbid.com/') #gets sudan bid HTML
     except Exception as e:
         return "error reaching sudanbid" 
-    #get items
+    #get items and link
     sudanbid_Soup=bs.BeautifulSoup(sudanbid_HTML,'html.parser')
     items=sudanbid_Soup.find_all('a','a_homelist') # beautifle soup find the tender titles taged as a_homelist
     sudanbid_list=[]#list to capture each element of the table 
+    sudanbid_linklist=[]#list the links of each item 
     for tendor in items:
         sudanbid_list.append(tendor.get_text())
+        sudanbid_linklist.append("https://www.sudanbid.com/"+tendor.attrs["href"])
     sudanbid_Df=pd.DataFrame(data=sudanbid_list,columns=["Itmes"])# creat and append into the 
     #get opening  dates
+    sudanbid_Df["link"]=sudanbid_linklist
     open_dates=sudanbid_Soup.find_all(text=re.compile("Opening Date:"))# # beautifle soup find the tender opening date using regular expresion "Opening Date:" 
     sudanbid_list=[]
     for d in open_dates:
         sudanbid_list.append(Extract_Date(d))   
-    sudanbid_Df["Opening Date"]=sudanbid_list
+    sudanbid_Df["Opening Date"]=pd.to_datetime(sudanbid_list,errors='coerce')
     #get closing  dates
     close_dates=sudanbid_Soup.find_all(text=re.compile("Deadline:")) # beautifle soup find the tender opening date using regular expresion ""Deadline:"" 
     sudanbid_list=[]
     for d in close_dates:
         sudanbid_list.append(Extract_Date(d))   
-    sudanbid_Df["Closeing Date"]=sudanbid_list
+    sudanbid_Df["Closeing Date"]= pd.to_datetime(sudanbid_list,errors='coerce')
     #get company 
     company=sudanbid_Soup.find_all("font",class_='sudanjob_orang_color') # beautifle soup find the tender posting form color // to do find a better way to do this 
     sudanbid_list=[]
     for i in company:
         sudanbid_list.append(i.get_text())   
     sudanbid_Df["company"]=sudanbid_list
-
-    links=sudanbid_Soup.find_all('a',class_="btn_class") # beautifle soup find the tender URL form buttons and Regex
-    sudanbid_list=[]
-    for i in links:
-        pass
-        #sudanbid_list.append("https://www.sudanbid.com/"+i.attrs["href"])  
-    #sudanbid_Df["URL"]=sudanbid_list
-    return sudanbid_Df
-print(get_Sudanbid().info())
+    # filter active tendors
+    active_mask= (sudanbid_Df["Closeing Date"] >= np.datetime64('today'))  
+    return sudanbid_Df[active_mask]
+print(get_Sudanbid().to_excel(r"C:\Users\hassan.eltigani\Desktop\DED\repos\sudanbid.xlsx"))
 
