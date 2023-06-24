@@ -64,5 +64,5 @@ def get_Sudanbid():
     # filter active tendors
     active_mask= (sudanbid_Df["Closeing Date"] >= np.datetime64('today'))  
     return sudanbid_Df[active_mask]
-print(get_Sudanbid().to_excel(r"C:\Users\hassan.eltigani\Desktop\DED\repos\sudanbid.xlsx"))
+print(get_Sudanbid().to_excel(r"sudanbid.xlsx"))
 
